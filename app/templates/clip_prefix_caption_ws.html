@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Websocket clip_prefix_caption</title>
+        <style>
+          .bg-salmon {
+            background-color: salmon;
+        }
+        </style>
+    </head>
+    <body>
+        <h1>Websocket clip_prefix_caption image upload</h1>
+        <ul id='messages'>
+        </ul>
+        <br>
+        <label for="fileUpload">Upload your image:</label>
+        <input type="file" id="fileUpload" name="file"><br>
+        <button type="button" onclick="sendPicture()">Submit</button>
+        <br>
+        <button type="button" onclick="connectWebsocket()">Reconnect</button>
+        <label id="status">Disconnected</label>
+        <br>
+        <button type="button" onclick="pingWebsocket()">Ping</button>
+
+        <script>
+            const status_label = document.getElementById('status')
+            var ws = connectWebsocket()
+
+            function connectWebsocket() {
+                // check websocket connection status
+                if ( !ws || ws.status != 200) {
+                    if (ws) {
+                        ws.close()
+                    }
+                    ws = new WebSocket("{{server_path_port}}/clip_prefix_caption_ws")
+                    //ws = new WebSocket("ws://localhost:5000/clip_prefix_caption_ws")
+                }
+                ws.onmessage = function(event) {
+                    console.log("onmessage")
+                    var messages = document.getElementById('messages')
+                    var message = document.createElement('li')
+                    var content = document.createTextNode(event.data)
+                    message.appendChild(content)
+                    messages.appendChild(message)
+                }
+
+                ws.binaryType = "arraybuffer"
+
+                ws.onopen = function() {
+                    console.log("onopen " + "Connected.")
+                    status_label.textContent = 'Connected'
+                }
+
+                ws.onclose = function() {
+                    console.log("Connection is closed...")
+                    // change text on label with id="status" to "Disconnected"
+                    status_label.textContent = 'Disconnected'
+                }
+
+                ws.onerror = function(e) {
+                    alert("Error " + e.msg)
+                    console.log("onerror " + e.msg)
+                }
+                return ws
+            }
+
+            function sendPicture() {
+                status_label.textContent = "Sending"
+
+                var file = document.getElementById('fileUpload').files[0]
+
+                var reader = new FileReader()
+
+                var rawData = new ArrayBuffer()
+
+                reader.loadend = function() {
+                    console.log("loadend");
+                }
+                reader.onload = function(e) {
+                    rawData = e.target.result
+                    ws.send(rawData)
+                    console.log("onload")
+                }
+                reader.readAsArrayBuffer(file)
+                console.log("sendPicture")
+                if (status_label.textContent == "Connected") {
+                    status_label.textContent = "Sending"
+                }
+            }
+
+            function pingWebsocket() {
+                var rawData = new ArrayBuffer(1)
+                rawData[0] = 1
+                ws.send(rawData)
+                console.log("pingWebsocket")
+                // check connection status
+
+                let path = "file:///home/ray/%D0%9C%D0%B0%D0%BB%D1%8E%D0%BD%D0%BA%D1%96/Cuprum/1cup.jpg"
+                // read file from filesystem path
+                let file = new File(path)
+                // convert file to ArrayBuffer
+                let rawData = file.readAll()
+                // send ArrayBuffer to websocket
+                ws.send(rawData)
+            }
+        </script>
+    </body>
+</html>

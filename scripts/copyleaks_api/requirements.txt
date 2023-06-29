@@ -1,0 +1,2 @@
+copyleaks
+python-dotenv
